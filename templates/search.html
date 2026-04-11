@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANY CLOUD - Search</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-brand">
+            <i class="fas fa-cloud"></i>
+            <span>ANY CLOUD</span>
+        </div>
+        <div class="header-user">
+            <span><i class="fas fa-user"></i> {{ user }}</span>
+            <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="/dashboard" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </a>
+
+            <!-- Search Form -->
+            <div class="search-section">
+                <h3><i class="fas fa-search"></i> Search</h3>
+                <form method="get" action="/search" class="search-form">
+                    <input type="text" name="q" value="{{ query }}" placeholder="Search files..." required>
+                    <button type="submit" class="btn-search"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Search Results -->
+        <section class="file-browser">
+            <div class="section-header">
+                <h2><i class="fas fa-search"></i> Search Results</h2>
+                {% if query %}
+                <span class="result-count">{{ results|length }} result(s) for "{{ query }}"</span>
+                {% endif %}
+            </div>
+
+            {% if results %}
+            <div class="search-results">
+                {% for result in results %}
+                <div class="search-item">
+                    <div class="search-info">
+                        <i class="fas {% if result.name.endswith('/') %}fa-folder{% else %}{{ get_file_icon(result.name) }}{% endif %}"></i>
+                        <div class="search-details">
+                            <span class="search-name">{{ result.name }}</span>
+                            <span class="search-location"><i class="fas fa-folder-open"></i> {{ result.folder }}</span>
+                        </div>
+                    </div>
+                    {% if not result.name.endswith('/') %}
+                    <div class="search-actions">
+                        <a href="/download/{{ result.path }}" class="action-btn download" title="Download"><i class="fas fa-download"></i></a>
+                        <a href="/preview/{{ result.path }}" target="_blank" class="action-btn preview" title="Preview"><i class="fas fa-eye"></i></a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% elif query %}
+            <div class="empty-state">
+                <i class="fas fa-search"></i>
+                <p>No results found</p>
+                <span>Try a different search term</span>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-search"></i>
+                <p>Enter a search term</p>
+                <span>Search for files across all folders</span>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

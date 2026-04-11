@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANY CLOUD - Activity Logs</title>
+    <link rel="stylesheet" href="/static/admin.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="admin-header">
+        <div class="header-brand">
+            <i class="fas fa-cloud"></i>
+            <span>ANY CLOUD Admin</span>
+        </div>
+        <nav class="header-nav">
+            <a href="/admin" class="nav-link"><i class="fas fa-users"></i> Users</a>
+            <a href="/logs" class="nav-link active"><i class="fas fa-history"></i> Logs</a>
+            <a href="/logout" class="nav-link logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- Logs Section -->
+        <section class="users-section">
+            <div class="section-header">
+                <h2><i class="fas fa-clipboard-list"></i> Activity Logs</h2>
+                <span class="section-desc">System activity and user actions history</span>
+            </div>
+
+            <div class="users-table-container">
+                <table class="users-table logs-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td class="time-cell">
+                                <span class="log-time">{{ log.time }}</span>
+                            </td>
+                            <td class="user-cell">
+                                <div class="user-info">
+                                    <div class="user-avatar small">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <span class="user-name">{{ log.user }}</span>
+                                </div>
+                            </td>
+                            <td class="action-cell">
+                                <span class="log-action">{{ log.action }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not logs %}
+                <div class="empty-state">
+                    <i class="fas fa-clipboard"></i>
+                    <p>No activity logs found</p>
+                    <span>System actions will appear here</span>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+</body>
+</html>

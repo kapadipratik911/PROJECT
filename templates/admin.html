@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANY CLOUD - Admin Panel</title>
+    <link rel="stylesheet" href="/static/admin.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="admin-header">
+        <div class="header-brand">
+            <i class="fas fa-cloud"></i>
+            <span>ANY CLOUD Admin</span>
+        </div>
+        <nav class="header-nav">
+            <a href="/admin" class="nav-link active"><i class="fas fa-users"></i> Users</a>
+            <a href="/logs" class="nav-link"><i class="fas fa-history"></i> Logs</a>
+            <a href="/logout" class="nav-link logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- Stats Overview -->
+        <section class="stats-bar">
+            <div class="stat-card">
+                <i class="fas fa-users"></i>
+                <div class="stat-info">
+                    <span class="stat-value">{{ users|length }}</span>
+                    <span class="stat-label">Total Users</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-user-shield"></i>
+                <div class="stat-info">
+                    <span class="stat-value">{{ users|selectattr("role", "equalto", "admin")|list|length }}</span>
+                    <span class="stat-label">Admins</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-user"></i>
+                <div class="stat-info">
+                    <span class="stat-value">{{ users|selectattr("role", "equalto", "user")|list|length }}</span>
+                    <span class="stat-label">Regular Users</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-section">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-bar"></i> Storage Usage Analytics</h2>
+                <span class="section-desc">Visual representation of user storage consumption</span>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-pie"></i> Storage Distribution</h3>
+                    <canvas id="storagePieChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-bar"></i> Usage by User</h3>
+                    <canvas id="storageBarChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users Management -->
+        <section class="users-section">
+            <div class="section-header">
+                <h2><i class="fas fa-users-cog"></i> User Management</h2>
+                <span class="section-desc">Manage user accounts and storage quotas</span>
+            </div>
+
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Storage Used</th>
+                            <th>Quota</th>
+                            <th>Usage</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td class="user-cell">
+                                <div class="user-info">
+                                    <div class="user-avatar">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <span class="user-name">{{ u.username }}</span>
+                                </div>
+                            </td>
+                            <td class="role-cell">
+                                <span class="role-badge {{ u.role }}">{{ u.role }}</span>
+                            </td>
+                            <td class="storage-cell">
+                                <span class="storage-used">{{ u.used_mb }} MB</span>
+                            </td>
+                            <td class="quota-cell">
+                                {% if u.role != "admin" %}
+                                <form method="post" action="/update-quota/{{ u.username }}" class="quota-form">
+                                    <input type="number" name="quota" value="{{ u.quota_mb }}" min="10" max="10000" class="quota-input">
+                                    <button type="submit" class="btn-save" title="Update Quota"><i class="fas fa-save"></i></button>
+                                </form>
+                                {% else %}
+                                <span class="quota-unlimited">Unlimited</span>
+                                {% endif %}
+                            </td>
+                            <td class="usage-cell">
+                                <div class="usage-bar">
+                                    <div class="usage-fill" style="width: {{ u.percent }}%"></div>
+                                </div>
+                                <span class="usage-text">{{ u.percent }}%</span>
+                            </td>
+                            <td class="actions-cell">
+                                {% if u.role != "admin" %}
+                                <a href="/delete-user/{{ u.username }}" class="btn-action delete" onclick="return confirm('Delete user {{ u.username }}? This will remove all their files.')" title="Delete User">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% else %}
+                                <span class="admin-protected"><i class="fas fa-lock"></i></span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Prepare data from template
+        const userData = [
+            {% for u in users %}
+            {
+                username: "{{ u.username }}",
+                used: {{ u.used_mb }},
+                quota: {{ u.quota_mb }},
+                free: {{ u.quota_mb - u.used_mb }},
+                percent: {{ u.percent }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        // Filter out admin users for cleaner charts (unlimited quota)
+        const regularUsers = userData.filter(u => u.quota < 1000);
+        const usernames = regularUsers.map(u => u.username);
+        const usedStorage = regularUsers.map(u => u.used);
+        const freeStorage = regularUsers.map(u => u.free);
+
+        // Pie Chart - Overall Storage Distribution
+        const totalUsed = usedStorage.reduce((a, b) => a + b, 0);
+        const totalFree = freeStorage.reduce((a, b) => a + b, 0);
+
+        const pieCtx = document.getElementById('storagePieChart').getContext('2d');
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Used Storage', 'Free Storage'],
+                datasets: [{
+                    data: [totalUsed, totalFree],
+                    backgroundColor: [
+                        'rgba(56, 189, 248, 0.8)',
+                        'rgba(34, 197, 94, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(56, 189, 248, 1)',
+                        'rgba(34, 197, 94, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#94a3b8',
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.raw + ' MB';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Bar Chart - Usage by User
+        const barCtx = document.getElementById('storageBarChart').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: usernames,
+                datasets: [
+                    {
+                        label: 'Used (MB)',
+                        data: usedStorage,
+                        backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                        borderColor: 'rgba(56, 189, 248, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Free (MB)',
+                        data: freeStorage,
+                        backgroundColor: 'rgba(34, 197, 94, 0.5)',
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 }
+                        },
+                        grid: {
+                            color: 'rgba(56, 189, 248, 0.1)'
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 }
+                        },
+                        grid: {
+                            color: 'rgba(56, 189, 248, 0.1)'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#94a3b8',
+                            font: { size: 12 }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

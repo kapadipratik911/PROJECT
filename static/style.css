@@ -1,0 +1,272 @@
+/* ================= GLOBAL RESET ================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Segoe UI", monospace;
+}
+
+/* ================= BACKGROUND (SCI-FI) ================= */
+body {
+    background: radial-gradient(circle at top, #0f172a, #020617, #000);
+    color: #e5e7eb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ================= ANIMATED GRID BACKGROUND ================= */
+body::before {
+    content: "";
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(90deg, rgba(56,189,248,0.05) 1px, transparent 1px),
+                linear-gradient(rgba(56,189,248,0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: moveGrid 20s linear infinite;
+}
+
+@keyframes moveGrid {
+    from { transform: translate(0, 0); }
+    to { transform: translate(-50px, -50px); }
+}
+
+/* ================= MAIN CONTAINER (GLASS UI) ================= */
+.container {
+    position: relative;
+    width: 420px;
+    padding: 30px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(56,189,248,0.4);
+    box-shadow: 0 0 30px rgba(56,189,248,0.4),
+                inset 0 0 20px rgba(56,189,248,0.2);
+    animation: fadeIn 1s ease-in-out;
+}
+
+/* ================= FADE IN ANIMATION ================= */
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ================= TITLE ================= */
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #38bdf8;
+    font-size: 22px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px #38bdf8;
+    animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 5px #38bdf8; }
+    to { text-shadow: 0 0 20px #38bdf8; }
+}
+
+/* ================= INPUTS ================= */
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(56,189,248,0.4);
+    background: rgba(2, 6, 23, 0.9);
+    color: white;
+    outline: none;
+    transition: 0.3s;
+}
+
+input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px #38bdf8;
+}
+
+/* ================= BUTTONS ================= */
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 15px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    color: black;
+    cursor: pointer;
+    transition: 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+/* futuristic hover effect */
+button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.6), transparent);
+    transition: 0.6s;
+}
+
+button:hover::before {
+    left: 100%;
+}
+
+button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px #38bdf8;
+}
+
+/* ================= LINKS ================= */
+a {
+    color: #38bdf8;
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+a:hover {
+    color: white;
+    text-shadow: 0 0 10px #38bdf8;
+}
+
+/* ================= FILE BOX (CLOUD FILE UI) ================= */
+.file-box {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(2, 6, 23, 0.8);
+    border: 1px solid rgba(56,189,248,0.4);
+    transition: 0.3s;
+}
+
+.file-box:hover {
+    transform: translateX(5px);
+    box-shadow: 0 0 15px #38bdf8;
+}
+
+/* ================= LOADING PULSE EFFECT ================= */
+.pulse {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 5px #38bdf8; }
+    50% { box-shadow: 0 0 25px #38bdf8; }
+    100% { box-shadow: 0 0 5px #38bdf8; }
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+    body {
+        padding: 20px;
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+    }
+    
+    body::before {
+        width: 300%;
+        height: 300%;
+    }
+    
+    .container {
+        width: 100%;
+        max-width: 380px;
+        padding: 25px;
+        margin: 20px auto;
+    }
+    
+    h2 {
+        font-size: 20px;
+    }
+    
+    input {
+        font-size: 16px;
+        padding: 12px;
+    }
+    
+    button {
+        font-size: 14px;
+        padding: 12px;
+    }
+    
+    .links {
+        font-size: 13px;
+    }
+    
+    .file-box {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        max-width: 100%;
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    h2 {
+        font-size: 18px;
+    }
+    
+    input {
+        font-size: 16px;
+        padding: 10px;
+    }
+    
+    button {
+        padding: 12px;
+    }
+    
+    .links {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .links a {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 360px) {
+    .container {
+        padding: 18px;
+    }
+    
+    h2 {
+        font-size: 16px;
+        letter-spacing: 1px;
+    }
+    
+    input {
+        font-size: 14px;
+    }
+    
+    button {
+        font-size: 13px;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    input, button, .links a {
+        min-height: 44px;
+    }
+    
+    .file-box:hover {
+        transform: none;
+    }
+}

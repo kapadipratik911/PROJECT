@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANY CLOUD - Trash</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-brand">
+            <i class="fas fa-cloud"></i>
+            <span>ANY CLOUD</span>
+        </div>
+        <div class="header-user">
+            <span><i class="fas fa-user"></i> {{ user }}</span>
+            <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="/dashboard" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </a>
+        </aside>
+
+        <!-- Trash Content -->
+        <section class="file-browser">
+            <div class="section-header">
+                <h2><i class="fas fa-trash-alt"></i> Trash</h2>
+                {% if items %}
+                <a href="/empty-trash" class="btn-empty-trash" onclick="return confirm('Empty trash? This will permanently delete all items.')">
+                    <i class="fas fa-trash"></i> Empty Trash
+                </a>
+                {% endif %}
+            </div>
+
+            {% if items %}
+            <div class="trash-list">
+                {% for item in items %}
+                <div class="trash-item">
+                    <div class="trash-info">
+                        <i class="fas {% if item.is_file %}fa-file{% else %}fa-folder{% endif %}"></i>
+                        <div class="trash-details">
+                            <span class="trash-name">{{ item.original_name }}</span>
+                            <span class="trash-time"><i class="fas fa-clock"></i> Deleted: {{ item.deleted_time }}</span>
+                        </div>
+                    </div>
+                    <div class="trash-actions">
+                        <a href="/restore/{{ item.trash_name }}" class="action-btn restore" title="Restore">
+                            <i class="fas fa-undo"></i>
+                        </a>
+                        <a href="/delete-permanent/{{ item.trash_name }}" class="action-btn delete-permanent" title="Delete Permanently" onclick="return confirm('Permanently delete {{ item.original_name }}?')">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-trash-alt"></i>
+                <p>Trash is empty</p>
+                <span>Deleted items will appear here</span>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANY CLOUD - Dashboard</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-brand">
+            <i class="fas fa-cloud"></i>
+            <span>ANY CLOUD</span>
+        </div>
+        <div class="header-user">
+            <span><i class="fas fa-user"></i> {{ user }}</span>
+            <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="dashboard">
+        <!-- Sidebar Actions -->
+        <aside class="sidebar">
+            <!-- Storage Widget -->
+            <div class="storage-widget">
+                <h3><i class="fas fa-hdd"></i> Storage</h3>
+                <div class="storage-info">
+                    <div class="storage-bar">
+                        <div class="storage-fill" style="width: {{ storage.percent }}%"></div>
+                    </div>
+                    <div class="storage-text">
+                        <span class="used">{{ storage.used }} MB</span>
+                        <span class="separator">/</span>
+                        <span class="quota">{{ storage.quota }} MB</span>
+                    </div>
+                    <span class="storage-percent">{{ storage.percent }}% used</span>
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Search Section -->
+            <div class="search-section">
+                <h3><i class="fas fa-search"></i> Search</h3>
+                <form method="get" action="/search" class="search-form">
+                    <input type="text" name="q" placeholder="Search files..." required>
+                    <button type="submit" class="btn-search"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+
+            <div class="upload-section">
+                <h3><i class="fas fa-upload"></i> Upload</h3>
+                <form method="post" enctype="multipart/form-data" class="upload-form">
+                    <label class="file-input-wrapper">
+                        <input type="file" name="file" required>
+                        <span class="file-label"><i class="fas fa-folder-open"></i> Choose File</span>
+                    </label>
+                    <button type="submit" class="btn-upload"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
+                </form>
+            </div>
+
+            <div class="folder-section">
+                <h3><i class="fas fa-folder-plus"></i> New Folder</h3>
+                <form method="post" action="/create-folder" class="folder-form">
+                    <input type="hidden" name="path" value="{{ path }}">
+                    <input type="text" name="folder" placeholder="Folder name" required>
+                    <button type="submit" class="btn-create"><i class="fas fa-plus"></i> Create</button>
+                </form>
+            </div>
+
+            <!-- Trash Link -->
+            <a href="/trash" class="trash-link">
+                <i class="fas fa-trash-alt"></i>
+                <span>Trash</span>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </aside>
+
+        <!-- File Browser -->
+        <section class="file-browser">
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb">
+                <a href="/dashboard" class="home-link"><i class="fas fa-home"></i> Home</a>
+                {% if path %}
+                    <span class="separator">/</span>
+                    <span class="current-path">{{ path }}</span>
+                {% endif %}
+            </nav>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Folders Section -->
+                {% if folders %}
+                <div class="section">
+                    <h3><i class="fas fa-folder"></i> Folders ({{ folders|length }})</h3>
+                    <div class="grid">
+                        {% for f in folders %}
+                        <div class="folder-item">
+                            <a href="/dashboard?path={{ path ~ '/' if path else '' }}{{ f }}" class="folder-link">
+                                <i class="fas fa-folder"></i>
+                                <span class="name">{{ f }}</span>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Files Section -->
+                {% if files %}
+                <div class="section">
+                    <h3><i class="fas fa-file"></i> Files ({{ files|length }})</h3>
+                    <div class="file-list">
+                        {% for f in files %}
+                        {% set icon_class = get_file_icon(f) %}
+                        <div class="file-item">
+                            <div class="file-info">
+                                <i class="fas {{ icon_class }} file-icon {{ icon_class.split('-')[-1] }}"></i>
+                                <span class="file-name">{{ f }}</span>
+                            </div>
+                            <div class="file-actions">
+                                <a href="/download/{{ f }}" class="action-btn download" title="Download"><i class="fas fa-download"></i></a>
+                                <a href="/preview/{{ f }}" target="_blank" class="action-btn preview" title="Preview"><i class="fas fa-eye"></i></a>
+                                <a href="/share/{{ f }}" class="action-btn share" title="Share"><i class="fas fa-share-alt"></i></a>
+                                <a href="/delete/{{ f }}" class="action-btn delete" title="Delete" onclick="return confirm('Move {{ f }} to trash?')"><i class="fas fa-trash"></i></a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Empty State -->
+                {% if not folders and not files %}
+                <div class="empty-state">
+                    <i class="fas fa-cloud"></i>
+                    <p>This folder is empty</p>
+                    <span>Upload files or create folders to get started</span>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+</body>
+</html>
