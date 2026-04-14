@@ -19,6 +19,98 @@ app.secret_key = "cloud_secret_key"
 def utility_processor():
     return dict(get_file_icon=get_file_icon)
 
+# ================= VISITOR TRACKING =================
+def track_visit():
+    """Track page visits for analytics"""
+    try:
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO visits (ip, path, user_agent) VALUES (?, ?, ?)",
+            (request.remote_addr, request.path, request.user_agent.string[:100] if request.user_agent else "")
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass  # Fail silently to not break the app
+
+@app.before_request
+def before_request():
+    """Track visits on every request except static files"""
+    if not request.path.startswith('/static') and request.path not in ['/favicon.ico']:
+        track_visit()
+
+# ================= VISITOR ANALYTICS =================
+def get_visitor_stats():
+    """Get visitor statistics for today, week, month, and all time"""
+    conn = get_db()
+    
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    
+    # Today (last 24 hours)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_count = conn.execute(
+        "SELECT COUNT(*) FROM visits WHERE time >= ?",
+        (today_start,)
+    ).fetchone()[0]
+    
+    # This week (last 7 days)
+    week_start = now - timedelta(days=7)
+    week_count = conn.execute(
+        "SELECT COUNT(*) FROM visits WHERE time >= ?",
+        (week_start,)
+    ).fetchone()[0]
+    
+    # This month (last 30 days)
+    month_start = now - timedelta(days=30)
+    month_count = conn.execute(
+        "SELECT COUNT(*) FROM visits WHERE time >= ?",
+        (month_start,)
+    ).fetchone()[0]
+    
+    # All time
+    total_count = conn.execute("SELECT COUNT(*) FROM visits").fetchone()[0]
+    
+    # Daily visits for the last 7 days (for chart)
+    daily_data = []
+    daily_labels = []
+    for i in range(6, -1, -1):
+        day = now - timedelta(days=i)
+        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        count = conn.execute(
+            "SELECT COUNT(*) FROM visits WHERE time >= ? AND time < ?",
+            (day_start, day_end)
+        ).fetchone()[0]
+        daily_data.append(count)
+        daily_labels.append(day.strftime("%a"))
+    
+    # Hourly visits for today (for chart)
+    hourly_data = []
+    hourly_labels = []
+    for i in range(0, 24, 3):  # Every 3 hours
+        hour_start = today_start + timedelta(hours=i)
+        hour_end = hour_start + timedelta(hours=3)
+        count = conn.execute(
+            "SELECT COUNT(*) FROM visits WHERE time >= ? AND time < ?",
+            (hour_start, hour_end)
+        ).fetchone()[0]
+        hourly_data.append(count)
+        hourly_labels.append(f"{i:02d}:00")
+    
+    conn.close()
+    
+    return {
+        "today": today_count,
+        "week": week_count,
+        "month": month_count,
+        "total": total_count,
+        "daily_data": daily_data,
+        "daily_labels": daily_labels,
+        "hourly_data": hourly_data,
+        "hourly_labels": hourly_labels
+    }
+
 # ================= LIMITS =================
 # Support uploads up to 10GB (max quota limit)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024 * 1024
@@ -61,6 +153,17 @@ def init_db():
         id INTEGER PRIMARY KEY,
         user TEXT,
         action TEXT,
+        time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # Create visits table for analytics
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS visits(
+        id INTEGER PRIMARY KEY,
+        ip TEXT,
+        path TEXT,
+        user_agent TEXT,
         time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -121,7 +224,10 @@ def add_log(user, action):
 # ================= LANDING PAGE =================
 @app.route("/")
 def landing():
-    return render_template("landing.html")
+    conn = get_db()
+    total_visits = conn.execute("SELECT COUNT(*) FROM visits").fetchone()[0]
+    conn.close()
+    return render_template("landing.html", total_visits=total_visits)
 
 # ================= LOGIN =================
 @app.route("/login", methods=["GET","POST"])
@@ -181,14 +287,16 @@ def dashboard():
 
     user = session["user"]
 
-    # current path (for navigation)
-    path = request.args.get("path", "")
+    # current path (for navigation) - support both GET and POST
+    path = request.args.get("path", "") or request.form.get("path", "")
 
     user_root = os.path.join(CLOUD_DIR, user)
     current_folder = os.path.join(user_root, path)
 
     # security check
     if not current_folder.startswith(user_root):
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "Invalid path"}), 400
         return "Invalid path"
 
     os.makedirs(current_folder, exist_ok=True)
@@ -207,10 +315,16 @@ def dashboard():
             storage = get_user_storage_info(user)
             if storage["used"] + (file_size / (1024 * 1024)) > storage["quota"]:
                 error_message = f"Storage limit exceeded. You have {storage['quota'] - storage['used']:.1f} MB free but file is {file_size / (1024 * 1024):.1f} MB."
+                # Return JSON error for AJAX requests
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"error": error_message}), 413
             else:
                 filename = secure_filename(file.filename)
                 file.save(os.path.join(current_folder, filename))
                 add_log(user, f"uploaded {filename}")
+                # Return JSON success for AJAX requests
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": True, "filename": filename, "message": f"{filename} uploaded successfully"}), 200
 
     items = os.listdir(current_folder)
 
@@ -221,6 +335,9 @@ def dashboard():
         full = os.path.join(current_folder, item)
 
         if os.path.isdir(full):
+            # Skip the .trash folder - it's internal
+            if item == ".trash":
+                continue
             folders.append(item)
         else:
             files.append(item)
@@ -239,19 +356,26 @@ def dashboard():
     )
 
 # ================= FILE PREVIEW =================
-@app.route("/preview/<path:filename>")
-def preview(filename):
-
+@app.route("/preview/<path:filepath>")
+def preview(filepath):
     if "user" not in session:
         return redirect("/login")
 
     user_root = os.path.join(CLOUD_DIR, session["user"])
-    file_path = os.path.join(user_root, filename)
+    file_path = os.path.join(user_root, filepath)
+
+    # Security check - ensure file is within user directory
+    if not os.path.abspath(file_path).startswith(os.path.abspath(user_root)):
+        return "Access denied", 403
 
     if not os.path.exists(file_path):
-        return "File not found"
+        return "File not found", 404
 
-    return send_from_directory(user_root, filename, as_attachment=False)
+    # Get directory and filename
+    directory = os.path.dirname(file_path)
+    filename = os.path.basename(file_path)
+
+    return send_from_directory(directory or user_root, filename, as_attachment=False)
 # create folder
 @app.route("/create-folder", methods=["POST"])
 def create_folder():
@@ -270,11 +394,61 @@ def create_folder():
 
     return redirect(f"/dashboard?path={path}")
 
+# ================= DELETE FOLDER =================
+@app.route("/delete-folder/<path:folderpath>")
+def delete_folder(folderpath):
+    """Move folder and contents to trash"""
+    if "user" not in session:
+        return redirect("/login")
+    
+    user = session["user"]
+    user_root = os.path.join(CLOUD_DIR, user)
+    folder_path = os.path.join(user_root, folderpath)
+    
+    # Security check - ensure folder is within user directory
+    if not os.path.abspath(folder_path).startswith(os.path.abspath(user_root)):
+        return "Access denied", 403
+    
+    if not os.path.exists(folder_path) or not os.path.isdir(folder_path):
+        return "Folder not found", 404
+    
+    # Move to trash with timestamp
+    trash_path = ensure_trash(user)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_name = os.path.basename(folderpath)
+    trash_name = f"{timestamp}_{folder_name}"
+    trash_folder = os.path.join(trash_path, trash_name)
+    
+    shutil.move(folder_path, trash_folder)
+    add_log(user, f"moved folder {folderpath} to trash")
+    
+    # Redirect back to parent folder
+    parent_path = os.path.dirname(folderpath)
+    if parent_path and parent_path != ".":
+        return redirect(f"/dashboard?path={parent_path}")
+    return redirect("/dashboard")
+
 # ================= DOWNLOAD =================
-@app.route("/download/<filename>")
-def download(filename):
-    folder=os.path.join(CLOUD_DIR,session["user"])
-    return send_from_directory(folder,filename,as_attachment=True)
+@app.route("/download/<path:filepath>")
+def download(filepath):
+    if "user" not in session:
+        return redirect("/login")
+    
+    user_root = os.path.join(CLOUD_DIR, session["user"])
+    file_path = os.path.join(user_root, filepath)
+    
+    # Security check - ensure file is within user directory
+    if not os.path.abspath(file_path).startswith(os.path.abspath(user_root)):
+        return "Access denied", 403
+    
+    if not os.path.exists(file_path):
+        return "File not found", 404
+    
+    # Get directory and filename
+    directory = os.path.dirname(file_path)
+    filename = os.path.basename(file_path)
+    
+    return send_from_directory(directory or user_root, filename, as_attachment=True)
 
 # ================= FILE ICON HELPER =================
 def get_file_icon(filename):
@@ -327,8 +501,12 @@ def delete(filename):
     trash_file = os.path.join(trash_path, trash_name)
     
     shutil.move(file_path, trash_file)
-    add_log(user, f"moved {filename} to trash")
+    add_log(user, f"moved {os.path.basename(filename)} to trash")
 
+    # Redirect back to the folder where the file was deleted
+    folder_path = os.path.dirname(filename)
+    if folder_path and folder_path != ".":
+        return redirect(f"/dashboard?path={folder_path}")
     return redirect("/dashboard")
 
 @app.route("/trash")
@@ -507,7 +685,25 @@ def admin():
             "percent": storage["percent"]
         })
 
-    return render_template("admin.html", users=users_with_storage)
+    # Get visitor analytics
+    visitor_stats = get_visitor_stats()
+
+    return render_template("admin.html", users=users_with_storage, visitors=visitor_stats)
+
+# ================= VISITOR STATS API =================
+@app.route("/api/visitor-stats")
+def api_visitor_stats():
+    """API endpoint for real-time visitor statistics"""
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    stats = get_visitor_stats()
+    return jsonify({
+        "today": stats["today"],
+        "week": stats["week"],
+        "month": stats["month"],
+        "total": stats["total"]
+    })
 
 # ================= UPDATE USER QUOTA =================
 @app.route("/update-quota/<username>", methods=["POST"])
@@ -584,27 +780,39 @@ def logs():
 
     return render_template("logs.html",logs=logs)
 # share files
-@app.route("/share/<filename>")
-def share_file(filename):
-
+@app.route("/share/<path:filepath>")
+def share_file(filepath):
     if "user" not in session:
         return redirect("/login")
+    
+    user = session["user"]
+    user_root = os.path.join(CLOUD_DIR, user)
+    file_path = os.path.join(user_root, filepath)
+    
+    # Security check - ensure file is within user directory
+    if not os.path.abspath(file_path).startswith(os.path.abspath(user_root)):
+        return "Access denied", 403
+    
+    if not os.path.exists(file_path):
+        return "File not found", 404
 
     token = str(uuid.uuid4())[:8]
 
     conn = get_db()
     conn.execute(
         "INSERT INTO shares(token, filename, owner) VALUES(?,?,?)",
-        (token, filename, session["user"])
+        (token, filepath, user)
     )
     conn.commit()
     conn.close()
+    
+    # Get host from request for proper URL
+    host = request.host_url.rstrip('/')
 
-    return f"Share Link: http://127.0.0.1:5000/public/{token}"
+    return f"Share Link: {host}/public/{token}"
 # public link
 @app.route("/public/<token>")
 def public_download(token):
-
     conn = get_db()
     share = conn.execute(
         "SELECT * FROM shares WHERE token=?",
@@ -613,11 +821,24 @@ def public_download(token):
     conn.close()
 
     if not share:
-        return "Invalid share link"
+        return "Invalid share link", 404
 
-    folder = os.path.join(CLOUD_DIR, share["owner"])
+    user_root = os.path.join(CLOUD_DIR, share["owner"])
+    filepath = share["filename"]  # This now includes subfolder path if applicable
+    file_path = os.path.join(user_root, filepath)
+    
+    # Security check
+    if not os.path.abspath(file_path).startswith(os.path.abspath(user_root)):
+        return "Access denied", 403
+    
+    if not os.path.exists(file_path):
+        return "File no longer exists", 404
 
-    return send_from_directory(folder, share["filename"], as_attachment=False)
+    # Get directory and filename
+    directory = os.path.dirname(file_path)
+    filename = os.path.basename(file_path)
+
+    return send_from_directory(directory or user_root, filename, as_attachment=False)
 # ================= LOGOUT =================
 @app.route("/logout")
 def logout():

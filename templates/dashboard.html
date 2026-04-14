@@ -58,13 +58,39 @@
 
             <div class="upload-section">
                 <h3><i class="fas fa-upload"></i> Upload</h3>
-                <form method="post" enctype="multipart/form-data" class="upload-form">
+                <form method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+                    <input type="hidden" name="path" value="{{ path }}">
                     <label class="file-input-wrapper">
-                        <input type="file" name="file" required>
-                        <span class="file-label"><i class="fas fa-folder-open"></i> Choose File</span>
+                        <input type="file" name="file" id="fileInput" required>
+                        <span class="file-label" id="fileLabel"><i class="fas fa-folder-open"></i> Choose File</span>
                     </label>
-                    <button type="submit" class="btn-upload"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
+                    <button type="submit" class="btn-upload" id="uploadBtn"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
                 </form>
+            </div>
+
+            <!-- Upload Progress Modal -->
+            <div id="uploadModal" class="upload-modal">
+                <div class="upload-modal-content">
+                    <h3><i class="fas fa-cloud-upload-alt"></i> Uploading...</h3>
+                    <div class="upload-file-name" id="uploadFileName"></div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <div class="upload-stats">
+                        <span id="uploadedSize">0 MB</span> / <span id="totalSize">0 MB</span>
+                    </div>
+                    <div class="upload-status" id="uploadStatus"></div>
+                </div>
+            </div>
+
+            <!-- Success Modal -->
+            <div id="successModal" class="success-modal">
+                <div class="success-modal-content">
+                    <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                    <h3>Upload Complete!</h3>
+                    <p id="successMessage"></p>
+                    <button class="btn-close-modal" onclick="closeSuccessModal()">OK</button>
+                </div>
             </div>
 
             <div class="folder-section">
@@ -108,6 +134,15 @@
                                 <i class="fas fa-folder"></i>
                                 <span class="name">{{ f }}</span>
                             </a>
+                            {% if path %}
+                            <a href="/delete-folder/{{ path }}/{{ f }}" class="folder-delete" title="Delete Folder" onclick="return confirm('Delete folder &quot;{{ f }}&quot; and all its contents?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% else %}
+                            <a href="/delete-folder/{{ f }}" class="folder-delete" title="Delete Folder" onclick="return confirm('Delete folder &quot;{{ f }}&quot; and all its contents?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
@@ -127,10 +162,17 @@
                                 <span class="file-name">{{ f }}</span>
                             </div>
                             <div class="file-actions">
+                                {% if path %}
+                                <a href="/download/{{ path }}/{{ f }}" class="action-btn download" title="Download"><i class="fas fa-download"></i></a>
+                                <a href="/preview/{{ path }}/{{ f }}" target="_blank" class="action-btn preview" title="Preview"><i class="fas fa-eye"></i></a>
+                                <a href="/share/{{ path }}/{{ f }}" class="action-btn share" title="Share"><i class="fas fa-share-alt"></i></a>
+                                <a href="/delete/{{ path }}/{{ f }}" class="action-btn delete" title="Delete" onclick="return confirm('Move {{ f }} to trash?')"><i class="fas fa-trash"></i></a>
+                                {% else %}
                                 <a href="/download/{{ f }}" class="action-btn download" title="Download"><i class="fas fa-download"></i></a>
                                 <a href="/preview/{{ f }}" target="_blank" class="action-btn preview" title="Preview"><i class="fas fa-eye"></i></a>
                                 <a href="/share/{{ f }}" class="action-btn share" title="Share"><i class="fas fa-share-alt"></i></a>
                                 <a href="/delete/{{ f }}" class="action-btn delete" title="Delete" onclick="return confirm('Move {{ f }} to trash?')"><i class="fas fa-trash"></i></a>
+                                {% endif %}
                             </div>
                         </div>
                         {% endfor %}
@@ -149,5 +191,132 @@
             </div>
         </section>
     </main>
+
+    <script>
+        // File input change handler - show selected filename
+        document.getElementById('fileInput').addEventListener('change', function() {
+            const fileLabel = document.getElementById('fileLabel');
+            if (this.files && this.files[0]) {
+                const fileName = this.files[0].name;
+                const fileSize = formatFileSize(this.files[0].size);
+                fileLabel.innerHTML = '<i class="fas fa-file"></i> ' + fileName + ' (' + fileSize + ')';
+            } else {
+                fileLabel.innerHTML = '<i class="fas fa-folder-open"></i> Choose File';
+            }
+        });
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Upload form handler
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+
+            // Show upload modal
+            showUploadModal(file);
+            
+            // Create FormData
+            const formData = new FormData(this);
+            
+            // Create XMLHttpRequest for progress tracking
+            const xhr = new XMLHttpRequest();
+            
+            // Progress handler
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    updateProgress(e.loaded, e.total, percentComplete);
+                }
+            });
+            
+            // Load handler - upload complete
+            xhr.addEventListener('load', function() {
+                hideUploadModal();
+                
+                if (xhr.status === 200) {
+                    // Show success modal
+                    showSuccessModal(file.name);
+                    // Reset form
+                    document.getElementById('uploadForm').reset();
+                    document.getElementById('fileLabel').innerHTML = '<i class="fas fa-folder-open"></i> Choose File';
+                } else {
+                    // Show error
+                    const response = JSON.parse(xhr.responseText || '{}');
+                    alert('Upload failed: ' + (response.error || 'Unknown error'));
+                }
+            });
+            
+            // Error handler
+            xhr.addEventListener('error', function() {
+                hideUploadModal();
+                alert('Upload failed. Please try again.');
+            });
+            
+            // Open and send
+            xhr.open('POST', '/dashboard', true);
+            xhr.send(formData);
+        });
+
+        // Show upload modal
+        function showUploadModal(file) {
+            const modal = document.getElementById('uploadModal');
+            document.getElementById('uploadFileName').textContent = file.name;
+            document.getElementById('totalSize').textContent = formatFileSize(file.size);
+            document.getElementById('uploadedSize').textContent = '0 MB';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('uploadStatus').textContent = 'Uploading...';
+            modal.style.display = 'flex';
+        }
+
+        // Update progress
+        function updateProgress(loaded, total, percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('uploadedSize').textContent = formatFileSize(loaded);
+            document.getElementById('uploadStatus').textContent = Math.round(percent) + '% complete';
+        }
+
+        // Hide upload modal
+        function hideUploadModal() {
+            document.getElementById('uploadModal').style.display = 'none';
+        }
+
+        // Show success modal
+        function showSuccessModal(fileName) {
+            const modal = document.getElementById('successModal');
+            document.getElementById('successMessage').innerHTML = '<strong>"' + fileName + '"</strong> is successfully uploaded!';
+            modal.style.display = 'flex';
+        }
+
+        // Close success modal
+        function closeSuccessModal() {
+            document.getElementById('successModal').style.display = 'none';
+            // Refresh page to show new file
+            window.location.reload();
+        }
+
+        // Close modals on outside click
+        window.addEventListener('click', function(e) {
+            const uploadModal = document.getElementById('uploadModal');
+            const successModal = document.getElementById('successModal');
+            
+            if (e.target === successModal) {
+                closeSuccessModal();
+            }
+        });
+    </script>
 </body>
 </html>

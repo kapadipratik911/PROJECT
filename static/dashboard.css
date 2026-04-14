@@ -282,6 +282,114 @@ body {
     border-color: var(--primary);
 }
 
+/* ================= UPLOAD MODAL ================= */
+.upload-modal, .success-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-modal-content, .success-modal-content {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 30px 40px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.upload-modal-content h3,
+.success-modal-content h3 {
+    font-size: 20px;
+    margin-bottom: 20px;
+    color: var(--text-light);
+}
+
+.upload-modal-content h3 i {
+    color: var(--primary);
+    margin-right: 8px;
+}
+
+.upload-file-name {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    word-break: break-all;
+}
+
+/* Progress Bar */
+.progress-container {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 6px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.upload-stats {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.upload-status {
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+/* Success Modal */
+.success-icon {
+    font-size: 60px;
+    color: #22c55e;
+    margin-bottom: 15px;
+}
+
+.success-modal-content h3 {
+    color: #22c55e;
+}
+
+.success-modal-content p {
+    color: var(--text-muted);
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+.btn-close-modal {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 40px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-close-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(34, 197, 94, 0.4);
+}
+
 /* File Input Wrapper */
 .file-input-wrapper {
     position: relative;
@@ -434,12 +542,18 @@ body {
     border-radius: 12px;
     padding: 20px;
     transition: all 0.3s;
+    position: relative;
 }
 
 .folder-item:hover {
     transform: translateY(-5px);
     border-color: var(--primary);
     box-shadow: 0 10px 30px rgba(56, 189, 248, 0.2);
+}
+
+.folder-item:hover .folder-delete {
+    opacity: 1;
+    visibility: visible;
 }
 
 .folder-link {
@@ -460,6 +574,36 @@ body {
     font-size: 14px;
     text-align: center;
     word-break: break-word;
+}
+
+/* Folder Delete Button */
+.folder-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+    z-index: 10;
+}
+
+.folder-delete:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.folder-delete i {
+    font-size: 12px;
 }
 
 /* ================= FILE LIST ================= */
@@ -948,6 +1092,47 @@ body {
         font-size: 28px;
     }
     
+    .folder-delete {
+        width: 24px;
+        height: 24px;
+        top: 6px;
+        right: 6px;
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .folder-delete i {
+        font-size: 10px;
+    }
+    
+    /* Upload Modal Responsive */
+    .upload-modal-content, .success-modal-content {
+        padding: 25px 20px;
+        margin: 20px;
+    }
+    
+    .upload-modal-content h3,
+    .success-modal-content h3 {
+        font-size: 18px;
+    }
+    
+    .success-icon {
+        font-size: 50px;
+    }
+    
+    .progress-container {
+        height: 10px;
+    }
+    
+    .upload-stats {
+        font-size: 12px;
+    }
+    
+    .btn-close-modal {
+        padding: 10px 30px;
+        font-size: 14px;
+    }
+    
     .action-btn {
         width: 32px;
         height: 32px;
@@ -1042,6 +1227,18 @@ body {
     .trash-link,
     .back-link {
         min-height: 44px;
+    }
+    
+    /* Show folder delete button on touch devices */
+    .folder-delete {
+        opacity: 1;
+        visibility: visible;
+        width: 32px;
+        height: 32px;
+    }
+    
+    .folder-delete i {
+        font-size: 14px;
     }
 }
 

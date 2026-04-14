@@ -476,6 +476,74 @@ body {
     font-size: 13px;
 }
 
+/* ================= VISITOR ANALYTICS ================= */
+.visitor-analytics {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.visitor-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.visitor-stat {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s;
+}
+
+.visitor-stat:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.stat-icon.today {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+}
+
+.stat-icon.week {
+    background: rgba(129, 140, 248, 0.15);
+    color: #818cf8;
+}
+
+.stat-icon.month {
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+}
+
+.stat-icon.total {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.visitor-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 1024px) {
     .admin-header {
@@ -555,6 +623,26 @@ body {
     
     .logs-table-container {
         overflow-x: auto;
+    }
+    
+    /* Visitor Analytics Responsive */
+    .visitor-stats-bar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .visitor-stat {
+        padding: 15px;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+    
+    .visitor-charts-grid {
+        grid-template-columns: 1fr;
     }
 }
 

@@ -114,6 +114,39 @@
         </div>
     </section>
 
+    <!-- Video Introduction Section -->
+    <section class="video-section">
+        <div class="video-container">
+            <div class="video-header">
+                <h2><i class="fas fa-play-circle"></i> See ANY CLOUD in Action</h2>
+                <p>Watch our introduction video to learn how ANY CLOUD can transform your file management experience.</p>
+            </div>
+            <div class="video-wrapper">
+                <video controls poster="/static/images/video-thumb.jpg" class="intro-video">
+                    <source src="/static/videos/intro.mp4" type="video/mp4">
+                    <source src="/static/videos/intro.webm" type="video/webm">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="video-overlay">
+                    <button class="play-btn" onclick="this.closest('.video-wrapper').querySelector('video').play()">
+                        <i class="fas fa-play"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Visitor Counter Section -->
+    <section class="visitor-counter">
+        <div class="visitor-counter-content">
+            <div class="counter-item">
+                <i class="fas fa-eye"></i>
+                <span class="counter-value">{{ "{:,}".format(total_visits) }}</span>
+                <span class="counter-label">Total Visits</span>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
         <p>&copy; 2026 ANY CLOUD. All rights reserved.</p>
